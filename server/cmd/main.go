@@ -1,10 +1,12 @@
 package main
 
-import "log"
+import (
+	"log"
+)
 
 //Run program
 func main() {
-	srv := new(app.Server)
+	srv := new(server.Server)
 	if err := srv.Run("8000"); err != nil {
 		log.Fatalf("Error port", err.Error())
 	}
