@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/AlexandrLitkevich/app/internal/app/store"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
@@ -14,6 +15,7 @@ type APIServer struct {
 	logger *logrus.Logger
 	//  добавляем роутер
 	router *mux.Router
+	store  *store.Store
 }
 
 func New(config *Config) *APIServer {
@@ -33,6 +35,10 @@ func (s *APIServer) Start() error {
 	}
 
 	s.configureRouter()
+
+	if err := s.configureStore(); err != nil {
+		return err
+	}
 
 	s.logger.Info("starting api server")
 
@@ -57,6 +63,18 @@ func (s *APIServer) configureLogger() error {
 func (s *APIServer) configureRouter() {
 	// TODO Как сделать несколько роутов?
 	s.router.HandleFunc("/hello", s.handleHello())
+}
+
+func (s *APIServer) configureStore() error {
+	st := store.New(s.config.Store)
+	// Open database
+	if err := st.Open(); err != nil {
+		return err
+	}
+
+	s.store = st
+
+	return nil
 }
 
 func (s *APIServer) handleHello() http.HandlerFunc {
