@@ -6,20 +6,9 @@ import (
 	"net/http"
 	"server/handler"
 	"server/internal/store"
-	"server/internal/userstore"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-
-type userServer struct {
-	store *userstore.UserStore
-}
-
-func NewUserServer() *userServer {
-	store := userstore.New()
-	return &userServer{store: store}
-}
 
 /* 
 1) Как парвельно работать с данными из ответа?(Работа с JSON)
