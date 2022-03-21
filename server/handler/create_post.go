@@ -28,10 +28,10 @@ func AddedUser (feed *store.SQLite) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
 		if r.Body == nil {
-            w.WriteHeader(http.StatusBadRequest)
-            return
-        }
-        defer r.Body.Close()
+                    w.WriteHeader(http.StatusBadRequest)
+                    return
+                }
+                defer r.Body.Close()
 
 		if r.Method == "POST" {
 			// Обрабатываем OPTION
