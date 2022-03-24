@@ -4,43 +4,43 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"server/handler"
+	"server/internal/auth"
 	"server/internal/store"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-/* 
-1) Как парвельно работать с данными из ответа?(Работа с JSON)
+/*
+1) Как парвельно работать с данными из ответа?(Работа с JSON) десорилизация (формат в байтах)
 2) Основы  SQL и работы с BD
 3) Основные паттерны и алгоритмы на беке
 4) как не беке обрабатывают OPTIONS???
-5) Переменная в виде одной буквы это норм?
-6) Требуемые базовые пакеты?
-7) Создание бд
-8) Вызов функций в соедних файлах(users_get & delete_users)
+5) для чего пишут api ???
 */
 
 func main() {
 	database, _ := sql.Open("sqlite3", "./users.db")
 
 	err := database.Ping()
+
 	if err != nil {
 		log.Panicln(err)
 	}
 
 	feed := store.FromSQLite(database)
+	log.Println("feed",feed)
 
 	// Мультиплексор поддерживат только точные пути
 	mux := http.NewServeMux()
-	//Ping ?
+	
 	fs := http.FileServer(http.Dir("../client/build"))
 
 	mux.Handle("/", fs)
 
-	mux.HandleFunc("/users", handler.UsersGet(feed))
-	mux.HandleFunc("/added", handler.AddedUser(feed))
-	mux.HandleFunc("/user/", handler.DeleteUser(feed))
+	mux.HandleFunc("/users", store.UsersGet(feed))
+	mux.HandleFunc("/added", store.CreateUser(feed))
+	mux.HandleFunc("/user/", store.DeleteUser(feed))
+	mux.HandleFunc("/api/auth/", auth.BasicAuth(auth.Protected))
 
 	log.Println("Serving http://127.0.0.1:8000")
 

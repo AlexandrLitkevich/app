@@ -8,4 +8,4 @@ back:
 
 
 front: 
-	cd ./client; npm run build
+	cd ./client; npm run start
