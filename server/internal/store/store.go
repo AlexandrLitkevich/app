@@ -9,8 +9,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"golang.org/x/crypto/bcrypt"
+
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 
@@ -48,7 +49,11 @@ func (s *SQLite) Get() []User {
 	var refreshToken string
 	for rows.Next() {
 		rows.Scan(&key, &username, &url, &password, &accessToken, &refreshToken)
-		users = append(users, User{key, username, url, password, accessToken, refreshToken})
+		users = append(users, User{Key: key,
+			Username: username,
+			Url: url,Password: password,
+			AccessToken: accessToken,
+			RefreshToken: refreshToken})
 	}
 	log.Println("users", users)
 	return users
@@ -57,8 +62,7 @@ func (s *SQLite) Get() []User {
 // FromSQLite creates a newfeed that uses sqlite
 func FromSQLite(conn *sql.DB) *SQLite {
 	stmt, _ := conn.Prepare(`
-	CREATE TABLE IF NOT EXISTS
-		users (
+	CREATE TABLE users (
 			key	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 			username TEXT
 			url TEXT
@@ -68,6 +72,7 @@ func FromSQLite(conn *sql.DB) *SQLite {
 		);
 	`)
 	stmt.Exec()
+	
 	return &SQLite{
 		DB: conn,
 	}
