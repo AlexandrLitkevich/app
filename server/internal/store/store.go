@@ -36,38 +36,45 @@ type UserFront struct {
 // Функция для воводы данных для отображения
 func (s *SQLite) Get() []User {
 	users := []User{}
-	rows, err := s.DB.Query("SELECT * FROM users")
+	rows, err := s.DB.Query("SELECT key,username,url FROM users")
 	if err != nil {
 		logrus.Error(err)
 	}
+	/* 
+    	defer пишем после обработки ошибок во избежении паники
+        Оператор задержки выполняеться после выполнения функции
+     */
 	defer rows.Close()
 	var key int
 	var username string
 	var url string
-	var password string
-	var accessToken string
-	var refreshToken string
 	for rows.Next() {
-		rows.Scan(&key, &username, &url, &password, &accessToken, &refreshToken)
+		err := rows.Scan(&key, &username, &url)
+
+		if err != nil {
+			logrus.Error(err)
+		}
 		users = append(users, User{Key: key,
 			Username: username,
-			Url: url,Password: password,
-			AccessToken: accessToken,
-			RefreshToken: refreshToken})
+			Url: url})
 	}
-	log.Println("users", users)
+	err = rows.Err()
+
+	if err != nil {
+		logrus.Error(err)
+	}
 	return users
 }
 
 // FromSQLite creates a newfeed that uses sqlite
 func FromSQLite(conn *sql.DB) *SQLite {
 	stmt, _ := conn.Prepare(`
-	CREATE TABLE users (
+	CREATE TABLE IF NOT EXISTS users (
 			key	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-			username TEXT
-			url TEXT
-			password TEXT
-			accessToken TEXT
+			username TEXT,
+			url TEXT,
+			password TEXT,
+			accessToken TEXT,
 			refreshToken TEXT
 		);
 	`)
