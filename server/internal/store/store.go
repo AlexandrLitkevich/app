@@ -28,11 +28,6 @@ type User struct {
 	RefreshToken    string `json:"refreshToken"`
 }
 
-type UserFront struct {
-	Key      int 	`json:"key"`
-	Username string `json:"username"`
-	Url      string `json:"url"`
-}
 // Функция для воводы данных для отображения
 func (s *SQLite) Get() []User {
 	users := []User{}
@@ -58,6 +53,7 @@ func (s *SQLite) Get() []User {
 			Username: username,
 			Url: url})
 	}
+	// !!Всегда нужго проверять наличие ошибок поможет в отладке
 	err = rows.Err()
 
 	if err != nil {
@@ -98,7 +94,7 @@ func UsersGet(users *SQLite) http.HandlerFunc {
 	}
 }
 
-// TODO сделать обязательные поля
+// TODO нужно разделить наверно
 func CreateUser (feed *SQLite) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request)  {
 		w.Header().Set("Content-Type", "application/json")
@@ -109,14 +105,24 @@ func CreateUser (feed *SQLite) http.HandlerFunc {
             w.WriteHeader(http.StatusBadRequest)
             return
         }
+		// Мы используем встроенную функцию defer, чтобы отложить выполнение r.Body.Close ()
         defer r.Body.Close()
 
 		if r.Method == "POST" {
 			// Обрабатываем OPTION
-			reqBody, _ := ioutil.ReadAll(r.Body)
+			reqBody, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				logrus.Error(err)
+			}
 
 			var user User
 			json.Unmarshal(reqBody, &user)
+			nameUnused := usedUsername(feed, user.Username)
+			// проверяем есть ли такое имя в базк данных
+			if !nameUnused {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			user.Key = rand.Intn(1000000)
 			user.Password = hashPassword(user.Password)	
 			// Запрос SQL
@@ -132,6 +138,31 @@ func CreateUser (feed *SQLite) http.HandlerFunc {
 		}
 	}
 }
+
+func usedUsername(feed *SQLite, name string) bool {
+	       rows, err := feed.DB.Query("SELECT username FROM users WHERE username = ?", name)
+	      /* 
+	              Не может отследить два подряд одинаковых пользователя
+	      */
+	       if err != nil {
+	               logrus.Error(err)
+	       }
+	
+	       defer rows.Close()
+	       var username string
+	
+	       for rows.Next() {
+	               err := rows.Scan(&username)
+	
+	               if err != nil {
+	                       logrus.Error(err)
+	               }
+	              
+	       }
+	      logrus.Println("username",username == "")
+	
+	       return username == ""
+	}
 
 func DeleteUser(feed *SQLite) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

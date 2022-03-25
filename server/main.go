@@ -20,7 +20,7 @@ import (
 
 func main() {
 	database, _ := sql.Open("sqlite3", "./users.db")
-
+	// Проверка подключения
 	err := database.Ping()
 
 	if err != nil {
@@ -28,7 +28,6 @@ func main() {
 	}
 
 	feed := store.FromSQLite(database)
-	log.Println("feed",feed)
 
 	// Мультиплексор поддерживат только точные пути
 	mux := http.NewServeMux()
