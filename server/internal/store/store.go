@@ -28,41 +28,17 @@ type User struct {
 	RefreshToken    string `json:"refreshToken"`
 }
 
-// Функция для воводы данных для отображения
-func (s *SQLite) Get() []User {
-	users := []User{}
-	rows, err := s.DB.Query("SELECT key,username,url FROM users")
-	if err != nil {
-		logrus.Error(err)
-	}
-	/* 
-    	defer пишем после обработки ошибок во избежении паники
-        Оператор задержки выполняеться после выполнения функции
-     */
-	defer rows.Close()
-	var key int
-	var username string
-	var url string
-	for rows.Next() {
-		err := rows.Scan(&key, &username, &url)
-
-		if err != nil {
-			logrus.Error(err)
-		}
-		users = append(users, User{Key: key,
-			Username: username,
-			Url: url})
-	}
-	// !!Всегда нужго проверять наличие ошибок поможет в отладке
-	err = rows.Err()
-
-	if err != nil {
-		logrus.Error(err)
-	}
-	return users
+type ResponseUser struct {
+	Key      		int `json:"key"`
+	Username 		string `json:"username" `
+	Url      		string `json:"url"`
 }
 
-// FromSQLite creates a newfeed that uses sqlite
+type AuthUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func FromSQLite(conn *sql.DB) *SQLite {
 	stmt, _ := conn.Prepare(`
 	CREATE TABLE IF NOT EXISTS users (
@@ -81,6 +57,62 @@ func FromSQLite(conn *sql.DB) *SQLite {
 	}
 }
 
+// Функция для воводы данных для отображения
+func (s *SQLite) Get() []ResponseUser {
+	users := []ResponseUser{}
+	rows, err := s.DB.Query("SELECT key,username,url FROM users")
+	if err != nil {
+		logrus.Error(err)
+	}
+	/* 
+    	defer пишем после обработки ошибок во избежении паники
+        Оператор задержки выполняеться после выполнения функции
+     */
+	defer rows.Close()
+	var key int
+	var username string
+	var url string
+	for rows.Next() {
+		err := rows.Scan(&key, &username, &url)
+		if err != nil {
+			logrus.Error(err)
+		}
+		users = append(users, ResponseUser{
+			Key: key,
+			Username: username,
+			Url: url})
+	}
+	// !!Всегда нужго проверять наличие ошибок поможет в отладке
+	err = rows.Err()
+
+	if err != nil {
+		logrus.Error(err)
+	}
+	return users
+}
+
+func (s *SQLite) AuthUser(user AuthUser) bool {
+	rows, err := s.DB.Query(`SELECT username,password FROM users WHERE username = ?`, user.Username)
+	if err != nil {
+		logrus.Error(err)
+	}
+	var (
+		username string
+		password string
+	)
+	for rows.Next() {
+
+	if err := rows.Scan(&username, &password); err != nil {
+		logrus.Error(err)
+		}
+	}
+	// Проверяем есть ли такой пользователь
+	if len(username) == 0 {
+		return false
+	}
+
+	 return CheckPasswordHash(user.Password, password)
+}
 
 func UsersGet(users *SQLite) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -107,17 +139,15 @@ func CreateUser (feed *SQLite) http.HandlerFunc {
         }
 		// Мы используем встроенную функцию defer, чтобы отложить выполнение r.Body.Close ()
         defer r.Body.Close()
-
 		if r.Method == "POST" {
 			// Обрабатываем OPTION
 			reqBody, err := ioutil.ReadAll(r.Body)
 			if err != nil {
 				logrus.Error(err)
 			}
-
 			var user User
 			json.Unmarshal(reqBody, &user)
-			nameUnused := usedUsername(feed, user.Username)
+			nameUnused := feed.Used(user.Username)
 			// проверяем есть ли такое имя в базк данных
 			if !nameUnused {
 				w.WriteHeader(http.StatusBadRequest)
@@ -139,30 +169,21 @@ func CreateUser (feed *SQLite) http.HandlerFunc {
 	}
 }
 
-func usedUsername(feed *SQLite, name string) bool {
-	       rows, err := feed.DB.Query("SELECT username FROM users WHERE username = ?", name)
-	      /* 
-	              Не может отследить два подряд одинаковых пользователя
-	      */
-	       if err != nil {
-	               logrus.Error(err)
-	       }
-	
-	       defer rows.Close()
-	       var username string
-	
-	       for rows.Next() {
-	               err := rows.Scan(&username)
-	
-	               if err != nil {
-	                       logrus.Error(err)
-	               }
-	              
-	       }
-	      logrus.Println("username",username == "")
-	
-	       return username == ""
+func (s *SQLite) Used(name string) bool {
+	rows, err := s.DB.Query("SELECT username FROM users WHERE username = ?", name)
+	if err != nil {
+		logrus.Error(err)
 	}
+	defer rows.Close()
+	var username string
+	for rows.Next() {
+		if err := rows.Scan(&username); err != nil {
+			logrus.Error(err)
+		}
+   }
+  logrus.Println("username",username == "")
+   return username == ""
+}
 
 func DeleteUser(feed *SQLite) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +193,6 @@ func DeleteUser(feed *SQLite) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Methods", "DELETE")
 		if r.Method == "DELETE" {
 			path := strings.Trim(r.URL.Path, "/")
-
 			pathParts := strings.Split(path, "/")// возвращает массив сторок
 			key, _ := strconv.Atoi(pathParts[1])// преобразуем в int
 			//Запрос SQL
@@ -187,14 +207,11 @@ func DeleteUser(feed *SQLite) http.HandlerFunc {
 	}
 }
 
-
 func hashPassword(password string) string {
     bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-
 	if err != nil {
 		logrus.Error(err)
 	}
-
     return string(bytes)
 }
 

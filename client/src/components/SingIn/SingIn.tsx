@@ -19,7 +19,7 @@ export const SingIn:FC<Props> = ({ setStatus }) => {
 
 
     const onFinish = (values: any) => {        
-        axios.post(`${endPoint}/api/auth/`, values).then((res) => {
+        axios.post(`${endPoint}/api/auth`, values).then((res) => {
              if((res.status === 200)) {
                 //TODO нехорошо
                 setStatus(true)

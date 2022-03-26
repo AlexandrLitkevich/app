@@ -3,10 +3,8 @@ import { Auth } from "./components/Auth";
 import { Main } from "./Pages/Main";
 
 const App = () => {
-    const [statusAuth, setStatusAuth] = useState(true)
-
-    console.log(statusAuth);
-    
+    const [statusAuth, setStatusAuth] = useState(false);
+        
     return (
         <>
             { !statusAuth ? <Auth setStatus={setStatusAuth}/> : null}
