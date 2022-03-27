@@ -39,6 +39,7 @@ export const ListUrl:FC<Props>= ({ users, setUsers }) => {
     const [keySelected, setKeySelected] = useState<React.Key[] >([]);
 
     async function deleteUser () {
+        //заложил удаление нескольких
         if(keySelected.length === 1) {
             const [ key ] = keySelected 
             await axios.delete(`${endPoint}/user/${key}`, {

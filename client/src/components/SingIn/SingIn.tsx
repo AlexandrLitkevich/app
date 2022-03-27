@@ -15,12 +15,13 @@ type Props = {
 };
 
 export const SingIn:FC<Props> = ({ setStatus }) => {
-    // костыль роутинга
 
 
     const onFinish = (values: any) => {        
         axios.post(`${endPoint}/api/auth`, values).then((res) => {
              if((res.status === 200)) {
+                console.log(res.data);
+                localStorage.setItem("token", res.data.AccessToken)
                 //TODO нехорошо
                 setStatus(true)
              }
@@ -36,12 +37,13 @@ export const SingIn:FC<Props> = ({ setStatus }) => {
             <Title>Авторизация</Title>
             <Form
                 name="basic"
-                labelCol={{ span: 8 }}
-                wrapperCol={{ span: 16 }}
                 initialValues={{ remember: true }}
                 onFinish={onFinish}
                 onFinishFailed={onFinishFailed}
                 autoComplete="off"
+                layout="vertical"
+    
+
             >
                 <Form.Item
                     label="Username"

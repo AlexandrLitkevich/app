@@ -8,7 +8,7 @@ const App = () => {
     return (
         <>
             { !statusAuth ? <Auth setStatus={setStatusAuth}/> : null}
-            { statusAuth ? <Main/> : null }
+            { statusAuth ? <Main /> : null }
         </>
     );
 }

@@ -11,15 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
-
-var user = store.AuthUser{
-	Username: "soso",
-	Password: "123",
-}
-
-
-
 // env или toml
 var mySigningKey = []byte("johenews")
 
@@ -27,20 +18,20 @@ var mySigningKey = []byte("johenews")
 type Response struct {
 	StatusCode  int
 	AccessToken string
+	Key int
 }
 
 
-func BasicAuth(feed *store.SQLite,handler http.HandlerFunc) http.HandlerFunc {
+func BasicAuth(feed *store.SQLite) http.HandlerFunc {
 	type Fail struct {
 		Status int `json:"status"`
 		Desc string `json:"desc"`
 	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST")
-
 
 		var checkData store.AuthUser
 		json.NewDecoder(r.Body).Decode(&checkData)
@@ -52,7 +43,16 @@ func BasicAuth(feed *store.SQLite,handler http.HandlerFunc) http.HandlerFunc {
 			w.Write(responseBytes)
 			return
 		}
-		handler.ServeHTTP(w, r)
+		validToken, err := GenerateJWT()
+		fmt.Println(validToken)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+		feed.WriteToken(checkData.Username, validToken)
+		dataBytes, _ := json.Marshal(Response{StatusCode: http.StatusOK, AccessToken: validToken})
+		w.WriteHeader(http.StatusOK)
+		w.Write(dataBytes)
 	}
 }
 
@@ -72,17 +72,3 @@ func GenerateJWT() (string, error) {
 	return tokenString, nil
 }
 
-func Protected(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	validToken, err := GenerateJWT()
-	fmt.Println(validToken)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	dataBytes, _ := json.Marshal(Response{StatusCode: http.StatusOK, AccessToken: validToken})
-	w.Write(dataBytes)
-}

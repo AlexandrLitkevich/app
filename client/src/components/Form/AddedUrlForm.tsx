@@ -1,5 +1,5 @@
-import { FC } from "react";
-import { Button, Form, Input, Modal } from "antd";
+import { FC, useState } from "react";
+import { Button, Form, Input, Modal, notification } from "antd";
 import axios from "axios";
 
 import { endPoint } from "../../constants";
@@ -11,10 +11,19 @@ type Props = {
 }
 
 export const AddedUrlForm:FC<Props> = ({ setUsers }) => {
+    
+    const runNotification = () => {
+        notification.error({ message: "Невозможно создать пользователя" })
+    }
 
-    const onFinish = (values: any) => {
-        axios.post(`${endPoint}/added`, values).then(newList => {
+    notification.error({ message: "Невозможно создать пользователя" })
+    
+
+    const onFinish = async (values: any) => {
+        await axios.post(`${endPoint}/added`, values).then(newList => {
             setUsers(newList.data)
+        }).catch(e => {
+            runNotification()
         })
     }
 

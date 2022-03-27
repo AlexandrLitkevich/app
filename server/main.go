@@ -8,6 +8,7 @@ import (
 	"server/internal/store"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -17,15 +18,16 @@ import (
 6) Еслт нет return то идут утечки?
 7)Написание конфигов
 8)Написание интерфейсов
+9) Как проверить в бд что поле NULL?
 */
 
 func main() {
-	database, _ := sql.Open("sqlite3", "./users.db")
+	database, _ := sql.Open("sqlite3", "./users.sqlite")
 	// Проверка подключения
 	err := database.Ping()
 
 	if err != nil {
-		log.Panicln(err)
+		logrus.Error(err)
 	}
 	feed := store.FromSQLite(database)
 
@@ -39,7 +41,8 @@ func main() {
 	mux.HandleFunc("/users", store.UsersGet(feed))
 	mux.HandleFunc("/added", store.CreateUser(feed))
 	mux.HandleFunc("/user/", store.DeleteUser(feed))
-	mux.HandleFunc("/api/auth/", auth.BasicAuth(feed, auth.Protected))
+	mux.HandleFunc("/api/auth", auth.BasicAuth(feed))
+	mux.HandleFunc("/api/userInfo", store.UserInfo(feed))
 
 	log.Println("Serving http://127.0.0.1:8000")
 

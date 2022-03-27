@@ -21,7 +21,7 @@ type SQLite struct {
 
 type User struct {
 	Key      		int `json:"key"`
-	Username 		string `json:"username" `
+	Username 		string `json:"username"`
 	Url      		string `json:"url"`
 	Password      	string `json:"password"`
 	AccessToken     string `json:"accessToken"`
@@ -114,6 +114,76 @@ func (s *SQLite) AuthUser(user AuthUser) bool {
 	 return CheckPasswordHash(user.Password, password)
 }
 
+func (s *SQLite) WriteToken(username, token string) {
+	// Безопасно ли это????
+	logrus.Info("write token=", token)
+	logrus.Info("write username=", username)
+	s.DB.Exec(`UPDATE users SET accessToken = ? WHERE username = ?`, token, username)
+}
+
+func (s *SQLite) GetUser(token string) []ResponseUser {
+	rows, err := s.DB.Query(`SELECT key,username,url FROM users WHERE accessToken = ?`, token)
+	if err != nil {
+		logrus.Error(err)
+	}
+	user := []ResponseUser{}
+	var (
+		key int
+		username string
+		url string
+	)
+	for rows.Next() {
+		if err := rows.Scan(&key, &username, &url); err != nil {
+			logrus.Error(err)
+		}
+		user = append(user, ResponseUser{
+			Key: key,
+			Username: username,
+			Url: url,
+		})
+	}
+	return user
+}
+
+func (s *SQLite) CheckToken(token string) bool  {
+	rows, err := s.DB.Query(`SELECT accessToken FROM users WHERE accessToken = ?`, token)
+	if err != nil {
+		logrus.Error(err)
+	}
+	var accessToken string
+	for rows.Next() {
+		if err := rows.Scan(&accessToken); err != nil {
+			logrus.Error(err)
+		}
+	}
+
+	return len(accessToken) != 0
+}
+
+func UserInfo(users *SQLite) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.Method == "GET" {
+			logrus.Info("headers==", r.Header["Authorization"][0])
+			headerAuth := r.Header["Authorization"][0]
+			isValidToken := users.CheckToken(headerAuth)
+			logrus.Warn("isValidToken=", isValidToken)
+			if !isValidToken {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			user := users.GetUser(headerAuth)
+			js, err := json.Marshal(user)
+
+			if err != nil {
+				logrus.Error(err)
+			}
+			w.Write(js)
+		}
+	}
+}
+
 func UsersGet(users *SQLite) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := users.Get()
@@ -125,9 +195,12 @@ func UsersGet(users *SQLite) http.HandlerFunc {
 		w.Write(js)
 	}
 }
-
 // TODO нужно разделить наверно
-func CreateUser (feed *SQLite) http.HandlerFunc {
+func CreateUser(feed *SQLite) http.HandlerFunc {
+	type Fail struct {
+		Desc string `json:"desc" `
+	}
+
 	return func(w http.ResponseWriter, r *http.Request)  {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -151,6 +224,8 @@ func CreateUser (feed *SQLite) http.HandlerFunc {
 			// проверяем есть ли такое имя в базк данных
 			if !nameUnused {
 				w.WriteHeader(http.StatusBadRequest)
+				resp, _ := json.Marshal(Fail{ Desc: "Невозможно создать пользователя"})
+				w.Write(resp)
 				return
 			}
 			user.Key = rand.Intn(1000000)
