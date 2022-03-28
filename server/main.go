@@ -4,43 +4,45 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"server/handler"
+	"server/internal/auth"
 	"server/internal/store"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sirupsen/logrus"
 )
 
-/* 
-1) Как парвельно работать с данными из ответа?(Работа с JSON)
-2) Основы  SQL и работы с BD
+/*
 3) Основные паттерны и алгоритмы на беке
 4) как не беке обрабатывают OPTIONS???
-5) Переменная в виде одной буквы это норм?
-6) Требуемые базовые пакеты?
-7) Создание бд
-8) Вызов функций в соедних файлах(users_get & delete_users)
+5) для чего пишут api ???
+6) Еслт нет return то идут утечки?
+7)Написание конфигов
+8)Написание интерфейсов
+9) Как проверить в бд что поле NULL?
 */
 
 func main() {
-	database, _ := sql.Open("sqlite3", "./users.db")
-
+	database, _ := sql.Open("sqlite3", "./users.sqlite")
+	// Проверка подключения
 	err := database.Ping()
-	if err != nil {
-		log.Panicln(err)
-	}
 
+	if err != nil {
+		logrus.Error(err)
+	}
 	feed := store.FromSQLite(database)
 
 	// Мультиплексор поддерживат только точные пути
 	mux := http.NewServeMux()
-	//Ping ?
+
 	fs := http.FileServer(http.Dir("../client/build"))
 
 	mux.Handle("/", fs)
 
-	mux.HandleFunc("/users", handler.UsersGet(feed))
-	mux.HandleFunc("/added", handler.AddedUser(feed))
-	mux.HandleFunc("/user/", handler.DeleteUser(feed))
+	mux.HandleFunc("/users", store.UsersGet(feed))
+	mux.HandleFunc("/added", store.CreateUser(feed))
+	mux.HandleFunc("/user/", store.DeleteUser(feed))
+	mux.HandleFunc("/api/auth", auth.BasicAuth(feed))
+	mux.HandleFunc("/api/userInfo", store.UserInfo(feed))
 
 	log.Println("Serving http://127.0.0.1:8000")
 

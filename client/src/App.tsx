@@ -1,37 +1,16 @@
-import React, { useReducer, useEffect, useState } from 'react';
-import { ListUrl } from "./components/ListUrl";
-import { AddedUrlForm } from "./components/Form"
-import { Layout } from "antd";
-import axios from "axios";
-import { endPoint } from "./constants"
-
-
-export type DataType = {
-    key: number
-    username: string
-    url: string
-};
+import { useState } from "react";
+import { Auth } from "./components/Auth";
+import { Main } from "./Pages/Main";
 
 const App = () => {
-    const [data, setData] = useState([])
-
-    useEffect(() => {
-        const req = axios.get(`${endPoint}/users`).then(res =>{
-            setData(res.data)
-        }) 
-    }, [])
-
-    const { Header, Content } = Layout;
+    const [statusAuth, setStatusAuth] = useState(false);
+        
     return (
-        <Layout>
-            <Header>
-                <AddedUrlForm setUsers={setData}/>
-            </Header>
-            <Content>
-                <ListUrl setUsers={setData} users={data}/>
-            </Content>
-        </Layout>
-    )
+        <>
+            { !statusAuth ? <Auth setStatus={setStatusAuth}/> : null}
+            { statusAuth ? <Main /> : null }
+        </>
+    );
 }
 
 export default App;

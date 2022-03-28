@@ -1,15 +1,20 @@
-import React, {FC, useEffect, useReducer, useState} from "react";
+import React, { FC,useState } from "react";
 import {
     Table,
     Divider,
     Button,
     Row,
-    Col
+    Col,
+    Typography
 } from 'antd';
 import "antd/dist/antd.css";
 import axios from "axios";
 import { endPoint } from "../../constants"
-import { DataType } from "../../App"
+import { StyledWrapper } from "./ListUrl.styled"
+import { DataType } from "../../Pages/Main/Mian";
+
+
+const { Title } = Typography;
 
 const columns = [
     {
@@ -34,6 +39,7 @@ export const ListUrl:FC<Props>= ({ users, setUsers }) => {
     const [keySelected, setKeySelected] = useState<React.Key[] >([]);
 
     async function deleteUser () {
+        //заложил удаление нескольких
         if(keySelected.length === 1) {
             const [ key ] = keySelected 
             await axios.delete(`${endPoint}/user/${key}`, {
@@ -58,8 +64,10 @@ export const ListUrl:FC<Props>= ({ users, setUsers }) => {
     };
 
     return (
-        <Row gutter={16}>
+        <StyledWrapper>
+            <Row gutter={16}>
             <Col span={12} offset={6}>
+                <Title>Список пользователей</Title>
                 {users && users.length &&
                     <Table
                         rowSelection={{
@@ -76,5 +84,6 @@ export const ListUrl:FC<Props>= ({ users, setUsers }) => {
             </Col>
 
         </Row>
+        </StyledWrapper>
     );
 };
